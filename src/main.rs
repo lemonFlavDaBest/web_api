@@ -1,13 +1,26 @@
 use warp::Filter;
 
+async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
+    let question = Question::new(
+        QuestionId::from_str("1").expect("no id provided"),
+        "First Question".to_string(),
+        "Content of the question".to_string(),
+        Some(vec!("faq".to_string())),
+    );
+
+    Ok(warp::reply::json(&question))
+}
+
 #[tokio::main]
 async fn main() {
-    //create a path Filter
-    let hello = warp::path("hello")
-        .map(|| format!("Hello, World!"));
-    
-        //start and the server and pass the route filter to it
-        warp::serve(hello)
-            .run(([127, 0, 0, 1], 3030))
-            .await;
+    let get_items = warp::get()
+        .and(warp::path("questions"))
+        .and(warp::path::end())
+        .and_then(get_questions);
+
+    let routes = get_items;
+       
+    warp::serve(routes)
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 }
