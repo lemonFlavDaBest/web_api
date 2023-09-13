@@ -3,7 +3,7 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 struct Question {
-    id: QuestionId(String),
+    id: QuestionId,
     title: String,
     content: String,
     tags: Option<Vec<String>>,
