@@ -9,6 +9,9 @@ struct Question {
     tags: Option<Vec<String>>,
 }
 
+#[derive(Debug, Serialize)]
+struct QuestionId(String);
+
 async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
     let question = Question::new(
         QuestionId::from_str("1").expect("no id provided"),
