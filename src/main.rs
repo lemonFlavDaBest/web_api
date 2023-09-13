@@ -1,4 +1,4 @@
-use warp::{reject::Reject, Filter};
+use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -41,12 +41,17 @@ async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
     }
 }
 
+async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
+   
+}
+
 #[tokio::main]
 async fn main() {
     let get_items = warp::get()
         .and(warp::path("questions"))
         .and(warp::path::end())
-        .and_then(get_questions);
+        .and_then(get_questions)
+        .recover(return_error);
 
     let routes = get_items;
        
