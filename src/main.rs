@@ -1,4 +1,4 @@
-use warp::Filter;
+use warp::{reject::Reject, Filter};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -12,15 +12,33 @@ struct Question {
 #[derive(Debug, Serialize)]
 struct QuestionId(String);
 
+impl Question {
+    fn new(id: QuestionId, title: String, content: String, tags: Option<Vec<String>>) -> Self {
+        Self {
+            id,
+            title,
+            content,
+            tags,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct InvalidId;
+impl Reject for InvalidId {}
+
 async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
     let question = Question::new(
-        QuestionId::from_str("1").expect("no id provided"),
+        QuestionId("1".to_string()),
         "First Question".to_string(),
         "Content of the question".to_string(),
         Some(vec!("faq".to_string())),
     );
 
-    Ok(warp::reply::json(&question))
+    match question.id.0.parse::<i32>() {
+        Ok(_) => Ok(warp::reply::json(&question)),
+        Err(_) => return Err(warp::reject::custom(InvalidId)),
+    }
 }
 
 #[tokio::main]
