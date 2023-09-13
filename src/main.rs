@@ -1,4 +1,13 @@
 use warp::Filter;
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct Question {
+    id: QuestionId(String),
+    title: String,
+    content: String,
+    tags: Option<Vec<String>>,
+}
 
 async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
     let question = Question::new(
