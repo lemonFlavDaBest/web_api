@@ -42,7 +42,17 @@ async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
 }
 
 async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
-   
+   if let Some(InvalidId) = err.find() {
+       Ok(warp::reply::with_status(
+           "Invalid id provided",
+           StatusCode::UNPROCESSABLE_ENTITY,
+       ))
+   } else {
+    Ok(warp::reply::with_status(
+        "Route Not Found",
+        StatusCode::NOT_FOUND,
+    ))
+   }
 }
 
 #[tokio::main]
