@@ -1,4 +1,4 @@
-use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode};
+use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Method};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -57,13 +57,18 @@ async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
 
 #[tokio::main]
 async fn main() {
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_methods(&[Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_header("content-type");
+
     let get_items = warp::get()
         .and(warp::path("questions"))
         .and(warp::path::end())
         .and_then(get_questions)
         .recover(return_error);
 
-    let routes = get_items;
+    let routes = get_items.with(cors);
        
     warp::serve(routes)
         .run(([127, 0, 0, 1], 3030))
