@@ -1,5 +1,6 @@
 use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Method, filters::{cors::CorsForbidden}};
 use serde::Serialize;
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize)]
 struct Question {
@@ -9,7 +10,7 @@ struct Question {
     tags: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash)]
 struct QuestionId(String);
 
 impl Question {
@@ -26,6 +27,23 @@ impl Question {
 #[derive(Debug)]
 struct InvalidId;
 impl Reject for InvalidId {}
+
+struct Store {
+    questions: HashMap<QuestionId, Question>,
+}
+
+impl Store {
+    fn new() -> Self {
+        Self {
+            questions: HashMap::new(),
+        }
+    }
+
+    fn add_question(mut self, question: Question)-> Self {
+        self.questions.insert(question.id.clone(), question);
+        self
+    }
+}
 
 async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
     let question = Question::new(
