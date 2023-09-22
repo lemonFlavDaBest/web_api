@@ -39,6 +39,16 @@ impl Store {
         }
     }
 
+    fn init(self) -> Self {
+        let question = Question::new(
+            QuestionId("1".to_string()),
+            "First Question".to_string(),
+            "Content of the question".to_string(),
+            Some(vec!("faq".to_string())),
+        );
+        self.add_question(question)
+    }
+
     fn add_question(mut self, question: Question)-> Self {
         self.questions.insert(question.id.clone(), question);
         self
