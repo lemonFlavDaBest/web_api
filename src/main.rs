@@ -66,7 +66,7 @@ async fn main() {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(&[Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_header("not-in-the-request");
+        .allow_header("content-type");
 
     let get_items = warp::get()
         .and(warp::path("questions"))
