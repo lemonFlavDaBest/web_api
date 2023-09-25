@@ -28,31 +28,27 @@ impl Question {
 struct InvalidId;
 impl Reject for InvalidId {}
 
+#[derive(Debug, Serialize, Deserialize)]
 struct Store {
     questions: HashMap<QuestionId, Question>,
 }
 
 impl Store {
     fn new() -> Self {
-        Self {
-            questions: HashMap::new(),
+        Store {
+            questions: Self::init(),
         }
     }
 
-    fn init(self) -> Self {
-        let question = Question::new(
-            QuestionId("1".to_string()),
-            "First Question".to_string(),
-            "Content of the question".to_string(),
-            Some(vec!("faq".to_string())),
-        );
-        self.add_question(question)
+    fn init() -> HashMap<QuestionId, Question> {
+        let file = include_str!("../questions.json");
+        serde_json::from_str(file).expect("Cannot read questions.json")
     }
 
-    fn add_question(mut self, question: Question)-> Self {
+    /*fn add_question(mut self, question: Question)-> Self {
         self.questions.insert(question.id.clone(), question);
         self
-    }
+    }*/
 }
 
 async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
@@ -91,6 +87,8 @@ async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
 
 #[tokio::main]
 async fn main() {
+    let store = Store::new();
+
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(&[Method::GET, Method::POST, Method::PUT, Method::DELETE])
