@@ -88,6 +88,7 @@ async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
 #[tokio::main]
 async fn main() {
     let store = Store::new();
+    let store_filter = warp::any().map(move || store.clone());
 
     let cors = warp::cors()
         .allow_any_origin()
