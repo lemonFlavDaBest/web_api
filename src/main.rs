@@ -13,21 +13,6 @@ struct Question {
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash, Deserialize)]
 struct QuestionId(String);
 
-impl Question {
-    fn new(id: QuestionId, title: String, content: String, tags: Option<Vec<String>>) -> Self {
-        Self {
-            id,
-            title,
-            content,
-            tags,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct InvalidId;
-impl Reject for InvalidId {}
-
 #[derive(Debug, Clone)]
 struct Store {
     questions: HashMap<QuestionId, Question>,
@@ -45,24 +30,11 @@ impl Store {
         serde_json::from_str(file).expect("Cannot read questions.json")
     }
 
-    /*fn add_question(mut self, question: Question)-> Self {
-        self.questions.insert(question.id.clone(), question);
-        self
-    }*/
 }
 
-async fn get_questions() -> Result<impl warp::Reply, warp::Rejection> {
-    let question = Question::new(
-        QuestionId("1".to_string()),
-        "First Question".to_string(),
-        "Content of the question".to_string(),
-        Some(vec!("faq".to_string())),
-    );
-
-    match question.id.0.parse::<i32>() {
-        Ok(_) => Ok(warp::reply::json(&question)),
-        Err(_) => return Err(warp::reject::custom(InvalidId)),
-    }
+async fn get_questions(store: Store) -> Result<impl warp::Reply, warp::Rejection> {
+    let res: Vec<Question> = store.questions.values().cloned().collect();
+    Ok(warp::reply::json(&res))
 }
 
 async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
@@ -71,12 +43,6 @@ async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
               error.to_string(),
               StatusCode::FORBIDDEN,
          ))
-   }
-   else if let Some(InvalidId) = err.find() {
-       Ok(warp::reply::with_status(
-           "Invalid id provided".to_string(),
-           StatusCode::UNPROCESSABLE_ENTITY,
-       ))
    } else {
     Ok(warp::reply::with_status(
         "Route Not Found".to_string(),
@@ -95,13 +61,14 @@ async fn main() {
         .allow_methods(&[Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_header("content-type");
 
-    let get_items = warp::get()
+    let get_questions = warp::get()
         .and(warp::path("questions"))
         .and(warp::path::end())
+        .and(store_filter)
         .and_then(get_questions)
         .recover(return_error);
 
-    let routes = get_items.with(cors);
+    let routes = get_questions.with(cors);
        
     warp::serve(routes)
         .run(([127, 0, 0, 1], 3030))
