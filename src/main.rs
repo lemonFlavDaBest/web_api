@@ -2,7 +2,7 @@ use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Met
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Question {
     id: QuestionId,
     title: String,
@@ -28,7 +28,7 @@ impl Question {
 struct InvalidId;
 impl Reject for InvalidId {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 struct Store {
     questions: HashMap<QuestionId, Question>,
 }
