@@ -19,6 +19,23 @@ enum Error {
     MissingParameters,
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result{
+        match self {
+            Error::ParseError(e) => write!(f, "Parse Error: {}", e),
+            Error::MissingParameters => write!(f, "Missing Parameters"),
+        }
+    }
+}
+
+impl Reject for Error {}
+
+#[derive(Debug)]
+struct Pagination {
+    start: usize,
+    limit: usize,
+}
+
 #[derive(Debug, Clone)]
 struct Store {
     questions: HashMap<QuestionId, Question>,
