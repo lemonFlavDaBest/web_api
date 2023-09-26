@@ -13,6 +13,12 @@ struct Question {
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash, Deserialize)]
 struct QuestionId(String);
 
+#[derive(Debug)]
+enum Error {
+    ParseError(std::num::ParseIntError),
+    MissingParameters,
+}
+
 #[derive(Debug, Clone)]
 struct Store {
     questions: HashMap<QuestionId, Question>,
@@ -35,7 +41,7 @@ impl Store {
 async fn get_questions(params: HashMap<String, String>, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
 
     let mut start = 0;
-    
+
     if let Some(n) = params.get("start") {
         start = n.parse::<usize>().expect("could not parse start");
     }
