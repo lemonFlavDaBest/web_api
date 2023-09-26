@@ -33,7 +33,7 @@ impl Reject for Error {}
 #[derive(Debug)]
 struct Pagination {
     start: usize,
-    limit: usize,
+    end: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -55,21 +55,36 @@ impl Store {
 
 }
 
-async fn get_questions(params: HashMap<String, String>, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-
-    let mut start = 0;
-
-    if let Some(n) = params.get("start") {
-        start = n.parse::<usize>().expect("could not parse start");
+fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, Error> {
+    if params.contains_key("start") && params.contains_key("end") {
+        Ok(Pagination {
+            start: params.get("start").unwrap().parse::<usize>().expect("could not parse start"),
+            end: params.get("end").unwrap().parse::<usize>().expect("could not parse end"),
+        })
+    } else {
+        Err(Error::MissingParameters)
     }
+}
 
-    println!("{}", start);
-    let res: Vec<Question> = store.questions.values().cloned().collect();
-    Ok(warp::reply::json(&res))
+async fn get_questions(params: HashMap<String, String>, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
+    if !params.is_empty() {
+        let pagination = extract_pagination(params)?;
+        let res: Vec<Question> = store.questions.values().cloned().collect();
+        let res = &res[pagination.start..pagination.end];
+        Ok(warp::reply::json(&res))
+    } else {
+        let res: Vec<Question> = store.questions.values().cloned().collect();
+        Ok(warp::reply::json(&res))
+    }
 }
 
 async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
-   if let Some(error) = err.find::<CorsForbidden>(){
+    if let Some(error) = err.find::<Error>() {
+        Ok(warp::reply::with_status(
+            error.to_string(),
+            StatusCode::RANGE_NOT_SATISFIABLE,
+        ))
+    } else if let Some(error) = err.find::<CorsForbidden>(){
          Ok(warp::reply::with_status(
               error.to_string(),
               StatusCode::FORBIDDEN,
