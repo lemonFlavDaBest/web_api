@@ -118,9 +118,8 @@ async fn main() {
         .and(warp::path("questions"))
         .and(warp::path::end())
         .and(warp::query())
-        .and(store_filter)
-        .and_then(get_questions)
-        .recover(return_error);
+        .and(store_filter.clone())
+        .and_then(get_questions);
 
     let add_question = warp::post()
         .and(warp::path("questions"))
