@@ -6,6 +6,16 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct Answer {
+    id: AnswerId,
+    content: String,
+    question_id: QuestionId,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash, Deserialize)]
+struct AnswerId(String);
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Question {
     id: QuestionId,
     title: String,
@@ -44,12 +54,14 @@ struct Pagination {
 #[derive(Debug, Clone)]
 struct Store {
     questions: Arc<RwLock<HashMap<QuestionId, Question>>>,
+    answers:Arc<RwLock<HashMap<AnswerId, Answer>>>,
 }
 
 impl Store {
     fn new() -> Self {
         Store {
             questions: Arc::new(RwLock::new(Store::init())),
+            answers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -58,6 +70,17 @@ impl Store {
         serde_json::from_str(file).expect("Cannot read questions.json")
     }
 
+
+}
+
+async fn add_answer(store: Store, params: HashMap<String, String>) -> Result<impl warp::Reply, warp::Rejection> {
+    let answer = Answer {
+        id: AnswerId("1".to_string()),
+        content: params.get("content").unwrap().to_string(),
+        question_id: QuestionId(params.get("question_id").unwrap().to_string()),
+    };
+    store.answers.write().await.insert(answer.id.clone(), answer);
+    Ok(warp::reply::with_status("Answer added", StatusCode::OK,))
 }
 
 fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, Error> {
@@ -168,10 +191,18 @@ async fn main() {
         .and(store_filter.clone())
         .and_then(delete_question);
 
+    let add_answer = warp::post()
+        .and(warp::path("answers"))
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and(warp::body::form())
+        .and_then(add_answer);
+
     let routes = get_questions
         .or(add_question)
         .or(update_question)
         .or(delete_question)
+        .or(add_answer)
         .with(cors)
         .recover(return_error);
        
