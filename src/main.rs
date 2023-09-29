@@ -1,4 +1,5 @@
-use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Method, filters::{cors::CorsForbidden}};
+use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Method, 
+    filters::{body::BodyDeserializeError, cors::CorsForbidden}};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -107,15 +108,20 @@ async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
          Ok(warp::reply::with_status(
               error.to_string(),
               StatusCode::FORBIDDEN,
-         ))
+        ))
+   } else if let Some(error) = err.find::<BodyDeserializeError>() {
+        Ok(warp::reply::with_status(
+            error.to_string(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+        ))
    } else {
-    Ok(warp::reply::with_status(
-        "Route Not Found".to_string(),
-        StatusCode::NOT_FOUND,
-    ))
+        Ok(warp::reply::with_status(
+            "Route Not Found".to_string(),
+            StatusCode::NOT_FOUND,
+        ))
    }
 }
-
+ 
 #[tokio::main]
 async fn main() {
     let store = Store::new();
