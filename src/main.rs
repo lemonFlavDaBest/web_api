@@ -1,4 +1,4 @@
-use warp::{reject::Reject, Filter, Rejection, Reply, http::StatusCode, http::Method, 
+use warp::{Filter, Rejection, Reply, http::StatusCode, http::Method, 
     filters::{body::BodyDeserializeError, cors::CorsForbidden}};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -26,24 +26,52 @@ struct Question {
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash, Deserialize)]
 struct QuestionId(String);
 
-#[derive(Debug)]
-enum Error {
-    ParseError(std::num::ParseIntError),
-    MissingParameters,
-    QuestionNotFound,
-}
+mod error {
+    use warp::{filters::{body::BodyDeserializeError, cors::CorsForbidden}, reject::Reject, http::StatusCode, Rejection, Reply};
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result{
-        match self {
-            Error::ParseError(e) => write!(f, "Parse Error: {}", e),
-            Error::MissingParameters => write!(f, "Missing Parameters"),
-            Error::QuestionNotFound => write!(f, "Question Not Found"),
+    #[derive(Debug)]
+    pub enum Error {
+        ParseError(std::num::ParseIntError),
+        MissingParameters,
+        QuestionNotFound,
+    }
+
+    impl std::fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result{
+            match self {
+                Error::ParseError(e) => write!(f, "Parse Error: {}", e),
+                Error::MissingParameters => write!(f, "Missing Parameters"),
+                Error::QuestionNotFound => write!(f, "Question Not Found"),
+            }
         }
     }
-}
 
-impl Reject for Error {}
+    pub async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
+        if let Some(error) = err.find::<Error>() {
+            Ok(warp::reply::with_status(
+                error.to_string(),
+                StatusCode::RANGE_NOT_SATISFIABLE,
+            ))
+        } else if let Some(error) = err.find::<CorsForbidden>(){
+             Ok(warp::reply::with_status(
+                  error.to_string(),
+                  StatusCode::FORBIDDEN,
+            ))
+       } else if let Some(error) = err.find::<BodyDeserializeError>() {
+            Ok(warp::reply::with_status(
+                error.to_string(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ))
+       } else {
+            Ok(warp::reply::with_status(
+                "Route Not Found".to_string(),
+                StatusCode::NOT_FOUND,
+            ))
+       }
+    }
+
+    impl Reject for Error {}
+}
 
 #[derive(Debug)]
 struct Pagination {
@@ -83,14 +111,14 @@ async fn add_answer(store: Store, params: HashMap<String, String>) -> Result<imp
     Ok(warp::reply::with_status("Answer added", StatusCode::OK,))
 }
 
-fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, Error> {
+fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, error::Error> {
     if params.contains_key("start") && params.contains_key("end") {
         Ok(Pagination {
             start: params.get("start").unwrap().parse::<usize>().expect("could not parse start"),
             end: params.get("end").unwrap().parse::<usize>().expect("could not parse end"),
         })
     } else {
-        Err(Error::MissingParameters)
+        Err(error::Error::MissingParameters)
     }
 }
 
@@ -117,39 +145,15 @@ async fn update_question(id: String, store: Store, question: Question) -> Result
             *q = question;
             Ok(warp::reply::with_status("Question updated", StatusCode::OK,))
         },
-        None => Err(warp::reject::custom(Error::QuestionNotFound)),
+        None => Err(warp::reject::custom(error::Error::QuestionNotFound)),
     }
 }
 
 async fn delete_question(id: String, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
     match store.questions.write().await.remove(&QuestionId(id)) {
         Some(_) => Ok(warp::reply::with_status("Question deleted", StatusCode::OK,)),
-        None => Err(warp::reject::custom(Error::QuestionNotFound)),
+        None => Err(warp::reject::custom(error::Error::QuestionNotFound)),
     }
-}
-
-async fn return_error(err: Rejection) -> Result<impl Reply, Rejection> {
-    if let Some(error) = err.find::<Error>() {
-        Ok(warp::reply::with_status(
-            error.to_string(),
-            StatusCode::RANGE_NOT_SATISFIABLE,
-        ))
-    } else if let Some(error) = err.find::<CorsForbidden>(){
-         Ok(warp::reply::with_status(
-              error.to_string(),
-              StatusCode::FORBIDDEN,
-        ))
-   } else if let Some(error) = err.find::<BodyDeserializeError>() {
-        Ok(warp::reply::with_status(
-            error.to_string(),
-            StatusCode::UNPROCESSABLE_ENTITY,
-        ))
-   } else {
-        Ok(warp::reply::with_status(
-            "Route Not Found".to_string(),
-            StatusCode::NOT_FOUND,
-        ))
-   }
 }
  
 #[tokio::main]
@@ -204,7 +208,7 @@ async fn main() {
         .or(delete_question)
         .or(add_answer)
         .with(cors)
-        .recover(return_error);
+        .recover(error::return_error);
        
     warp::serve(routes)
         .run(([127, 0, 0, 1], 3030))
