@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock; 
 
-use crate::types::{Answer, AnswerId, Question, QuestionId};
+use crate::types::{answer::{Answer, AnswerId}, question::{Question, QuestionId}};
 
 
 #[derive(Debug, Clone)]
