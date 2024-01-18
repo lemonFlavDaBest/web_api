@@ -6,6 +6,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 mod error;
+mod store;
+mod types;
+mod routes;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Answer {
