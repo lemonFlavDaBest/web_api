@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Question {
-    id: QuestionId,
+    pub id: QuestionId,
     title: String,
     content: String,
     tags: Option<Vec<String>>,

@@ -3,11 +3,11 @@ use crate::error;
 
 #[derive(Debug)]
 pub struct Pagination {
-    start: usize,
-    end: usize,
+    pub start: usize,
+    pub end: usize,
 }
 
-fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, error::Error> {
+pub fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, error::Error> {
     if params.contains_key("start") && params.contains_key("end") {
         Ok(Pagination {
             start: params.get("start").unwrap().parse::<usize>().expect("could not parse start"),
