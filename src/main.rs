@@ -10,15 +10,6 @@ mod store;
 mod types;
 mod routes;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Answer {
-    id: AnswerId,
-    content: String,
-    question_id: QuestionId,
-}
-
-#[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash, Deserialize)]
-struct AnswerId(String);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Question {
@@ -39,8 +30,8 @@ struct Pagination {
 
 
 async fn add_answer(store: store::Store, params: HashMap<String, String>) -> Result<impl warp::Reply, warp::Rejection> {
-    let answer = Answer {
-        id: AnswerId("1".to_string()),
+    let answer = types::answer::Answer {
+        id: types::answer::AnswerId("1".to_string()),
         content: params.get("content").unwrap().to_string(),
         question_id: QuestionId(params.get("question_id").unwrap().to_string()),
     };
